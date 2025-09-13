@@ -1,8 +1,9 @@
 import httpx
 from typing import List
 
+
 class OllamaEmbedder:
-    def __init__(self, base_url: str = "http://localhost:11434/api/embeddings", model: str = "llama2"):
+    def __init__(self, base_url: str = "http://localhost:11434/api/embeddings", model: str = "nomic-embed-text"):
         self.base_url = base_url
         self.model = model
 
