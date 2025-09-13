@@ -10,6 +10,10 @@ import uuid
 import re
 
 class SearchRequest(BaseModel):
+    """
+    Modelo de entrada para búsqueda de versículos.
+    Permite búsqueda literal o semántica, con filtros y paginación.
+    """
     q: str = Field(..., description="Consulta de búsqueda")
     filters: Optional[Dict[str, Any]] = Field(None, description="Filtros opcionales")
     top_k: Optional[int] = Field(10, description="Número máximo de resultados")
@@ -17,9 +21,12 @@ class SearchRequest(BaseModel):
     mode: Optional[str] = Field("literal", description="Modo de búsqueda: 'literal' o 'semantic'")
 
 class SearchResult(BaseModel):
+    """
+    Resultado de búsqueda: incluye id, score, snippet y metadatos.
+    """
     id: str
     score: float
-    snippet: Optional[str]
+    snippet: Optional[str] = None
     metadata: Dict[str, Any]
 
 class SearchResponse(BaseModel):
@@ -71,15 +78,25 @@ async def search_endpoint(request: SearchRequest):
 
 
 class EmbeddingUpsertItem(BaseModel):
-    id: Optional[str]
+    """
+    Item para upsert de embeddings en Pinecone.
+    El campo id es obligatorio y debe seguir el patrón de referencia.
+    """
+    id: str
     text: str
     metadata: Optional[Dict[str, Any]] = None
 
 class EmbeddingUpsertRequest(BaseModel):
+    """
+    Request para upsert de embeddings: lista de items y namespace opcional.
+    """
     items: List[EmbeddingUpsertItem]
     namespace: Optional[str] = None
 
 class EmbeddingUpsertResponse(BaseModel):
+    """
+    Respuesta de upsert: cantidad de upserted y lista de fallos.
+    """
     upserted: int
     failed: List[Dict[str, Any]]
 
@@ -112,6 +129,9 @@ async def embeddings_upsert_endpoint(request: EmbeddingUpsertRequest):
 
 
 class DocumentResponse(BaseModel):
+    """
+    Documento completo: id, texto, metadatos y fechas.
+    """
     id: str
     text: str
     metadata: Dict[str, Any]
@@ -147,6 +167,9 @@ async def get_document_by_id(id: str):
 
 
 class DocumentListResponse(BaseModel):
+    """
+    Respuesta de listado de documentos con paginación.
+    """
     items: List[DocumentResponse]
     total: int
     limit: int
@@ -187,10 +210,16 @@ async def list_documents(limit: int = Query(20, ge=1, le=100), offset: int = Que
 
 
 class ReindexRequest(BaseModel):
+    """
+    Request para reindexado: batch_size y dry_run opcionales.
+    """
     batch_size: Optional[int] = 1000
     dry_run: Optional[bool] = False
 
 class ReindexResponse(BaseModel):
+    """
+    Respuesta de reindex: job_id y status.
+    """
     job_id: str
     status: str
 
@@ -211,13 +240,19 @@ async def admin_reindex_endpoint(request: ReindexRequest):
 
 
 class DocumentCreateRequest(BaseModel):
-    id: str  # obligatorio
+    """
+    Request para crear o actualizar documento.
+    El campo id es obligatorio y debe seguir el patrón de referencia.
+    """
+    id: str
     text: str
     metadata: Optional[Dict[str, Any]] = None
 
     @classmethod
-    def validate_id(cls, v):
-        # Ejemplo de patrón: AT-genesis-06-010
+    def validate_id(cls, v: str) -> str:
+        """
+        Valida que el id cumpla el patrón AT/NT-volumen-capitulo-versiculo (ej: AT-genesis-06-010).
+        """
         pattern = r"^(AT|NT)-[a-z0-9\-]+-\d{2}-\d{3}$"
         if not re.match(pattern, v):
             raise ValueError("El id no cumple el patrón requerido (ej: AT-genesis-06-010)")
@@ -228,6 +263,9 @@ class DocumentCreateRequest(BaseModel):
         yield cls.validate_id
 
 class DocumentCreateResponse(BaseModel):
+    """
+    Respuesta de creación/actualización de documento.
+    """
     id: str
     status: str  # "created" | "updated"
 
