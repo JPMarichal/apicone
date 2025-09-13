@@ -6,6 +6,7 @@ from src.usecases.search_usecase import SearchUseCase
 from src.services.inverted_index import InvertedIndexService
 import os
 from datetime import datetime
+import uuid
 
 class SearchRequest(BaseModel):
     q: str = Field(..., description="Consulta de búsqueda")
@@ -182,3 +183,27 @@ async def list_documents(limit: int = Query(20, ge=1, le=100), offset: int = Que
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error leyendo corpus: {str(e)}")
     return DocumentListResponse(items=items, total=total, limit=limit, offset=offset)
+
+
+class ReindexRequest(BaseModel):
+    batch_size: Optional[int] = 1000
+    dry_run: Optional[bool] = False
+
+class ReindexResponse(BaseModel):
+    job_id: str
+    status: str
+
+@router.post("/admin/reindex", response_model=ReindexResponse)
+async def admin_reindex_endpoint(request: ReindexRequest):
+    """
+    Lanza un job background para reconciliar/repoblar vector DB. Si dry_run no se especifica o es False, ejecuta el job real.
+    """
+    job_id = str(uuid.uuid4())
+    # Simulación: en producción, aquí se lanzaría el job real (Celery, arq, etc.)
+    if not request.dry_run:
+        # Aquí iría la lógica para lanzar el job real de reindex
+        # Por ahora, solo se registra el job_id y status
+        status = "accepted"
+    else:
+        status = "dry_run"
+    return ReindexResponse(job_id=job_id, status=status)
