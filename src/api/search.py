@@ -63,11 +63,17 @@ search_usecase = SearchUseCase(index_service, embedder=embedder, pinecone_adapte
 
 import asyncio
 
-@router.post("/search", response_model=SearchResponse)
-async def search_endpoint(request: SearchRequest):
+@router.post("/search", response_model=Dict[str, Any])
+async def search_endpoint(request: SearchRequest = Body(...)):
     """
-    Endpoint de búsqueda literal y semántica.
-    Aplica optimizaciones y patrones SOLID en la lógica interna.
+    Endpoint de búsqueda de versículos.
+    Permite búsqueda literal o semántica sobre el corpus, con filtros y paginación.
+    - q: consulta de texto
+    - filters: filtros opcionales
+    - top_k: número máximo de resultados
+    - include_snippets: incluir fragmentos de texto
+    - mode: 'literal' o 'semantic'
+    Responde con lista de resultados y embedding de la consulta si aplica.
     """
     results = await search_usecase.search(
         request.q,
@@ -104,7 +110,11 @@ class EmbeddingUpsertResponse(BaseModel):
 @router.post("/embeddings/upsert", response_model=EmbeddingUpsertResponse)
 async def embeddings_upsert_endpoint(request: EmbeddingUpsertRequest):
     """
-    Upsert de embeddings en Pinecone. Genera embedding con Ollama y almacena en el vector DB.
+    Upsert de embeddings en Pinecone.
+    Genera embedding con Ollama y almacena en el vector DB.
+    - items: lista de objetos con id, text y metadata
+    - namespace: opcional
+    Responde con cantidad de upserted y lista de fallos.
     """
     upserted = 0
     failed: List[Dict[str, Any]] = []
@@ -142,6 +152,8 @@ class DocumentResponse(BaseModel):
 async def get_document_by_id(id: str):
     """
     Devuelve el documento por ID, usando el corpus local como fuente inicial.
+    - id: identificador único del documento (patrón AT/NT-volumen-capitulo-versiculo)
+    Responde con el documento completo y fechas.
     """
     # Buscar en corpus local (versiculos.jsonl)
     import json
@@ -179,6 +191,9 @@ class DocumentListResponse(BaseModel):
 async def list_documents(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0)):
     """
     Lista documentos del corpus local con paginación básica.
+    - limit: máximo de documentos por página
+    - offset: desplazamiento inicial
+    Responde con lista de documentos y total.
     """
     import json
     import os
@@ -226,7 +241,10 @@ class ReindexResponse(BaseModel):
 @router.post("/admin/reindex", response_model=ReindexResponse)
 async def admin_reindex_endpoint(request: ReindexRequest):
     """
-    Lanza un job background para reconciliar/repoblar vector DB. Si dry_run no se especifica o es False, ejecuta el job real.
+    Lanza un job background para reconciliar/repoblar vector DB.
+    - batch_size: tamaño de lote
+    - dry_run: si es True, solo simula
+    Responde con job_id y status ('accepted' o 'dry_run').
     """
     job_id = str(uuid.uuid4())
     # Simulación: en producción, aquí se lanzaría el job real (Celery, arq, etc.)
@@ -272,7 +290,11 @@ class DocumentCreateResponse(BaseModel):
 @router.post("/documents", response_model=DocumentCreateResponse)
 async def create_or_update_document(request: DocumentCreateRequest = Body(...)):
     """
-    Crea o actualiza un documento en el corpus local (versiculos.jsonl). El id debe cumplir el patrón requerido.
+    Crea o actualiza un documento en el corpus local (versiculos.jsonl).
+    - id: obligatorio, patrón AT/NT-volumen-capitulo-versiculo
+    - text: texto completo del versículo
+    - metadata: metadatos opcionales
+    Responde con id y estado ('created' o 'updated').
     """
     import json
     import os
