@@ -108,24 +108,30 @@ Autenticación: JWT (OAuth2 password/client_credentials) y/o API keys para servi
 1. Diseño y análisis:
    - Confirmar stack y contrato API. (Artefacto: `PLAN.md`, contrato OpenAPI inicial)
    - Analizar la lógica de `ask_pinecone.py` y definir los endpoints equivalentes y mejorados.
-2. Scaffold y migración:
+2. Scaffold y entorno:
    - Crear repo `apicone` con FastAPI app, healthcheck, configuración y Dockerfile.
-   - Migrar la lógica de búsqueda literal y semántica de `ask_pinecone.py` a la API.
-   - Implementar optimizaciones sugeridas: serialización/carga rápida del índice inverso, uso de orjson, cache en memoria, paralelización en la construcción del índice.
-3. Implementación core y pruebas:
-   - Implementar endpoints `/search` y `/embeddings/upsert` con lógica optimizada.
-   - Validar que la API cubra todos los modos de consulta del script original, incluyendo sugerencias y ordenamiento.
-   - Tests unitarios y de integración.
-4. Despliegue y documentación:
+   - Definir y probar el stack completo en Docker Compose (API, Postgres, Redis).
+   - Configurar variables de entorno y documentación básica.
+3. Migración y desarrollo de lógica de negocio:
+   - Migrar la lógica principal de `ask_pinecone.py` a la API (búsqueda literal y semántica).
+   - Implementar los endpoints principales: `/search`, `/embeddings/upsert`, `/health`, etc.
+   - Adaptar y optimizar el índice inverso y la integración con Pinecone.
+   - Validar que la API cubra todos los modos de consulta y sugerencias del script original.
+   - Crear y ejecutar pruebas unitarias y de integración para los endpoints.
+   - Documentar los endpoints en el código (docstrings y modelos Pydantic).
+4. Despliegue y documentación avanzada:
    - Exponer la documentación OpenAPI y endpoints interactivos.
    - Probar el rendimiento en Docker (Windows y Ubuntu).
    - Desplegar en VPS Ubuntu y validar funcionamiento.
+   - Ampliar la documentación para usuarios y desarrolladores.
 
-## Tareas inmediatas (próximos pasos)
-- [ ] Analizar y migrar la lógica de `ask_pinecone.py` a FastAPI, definiendo endpoints equivalentes y mejorados.
-- [ ] Implementar optimizaciones en la construcción y uso del índice inverso (serialización, orjson, cache, paralelización).
-- [ ] Documentar y exponer la API con OpenAPI.
-- [ ] Validar cobertura funcional y rendimiento en entorno Docker.
+## Tareas inmediatas (fase 3)
+- [ ] Migrar la lógica principal de `ask_pinecone.py` a FastAPI, implementando búsqueda literal y semántica.
+- [ ] Implementar los endpoints principales definidos en el contrato.
+- [ ] Optimizar el índice inverso y la integración con Pinecone.
+- [ ] Validar cobertura funcional y sugerencias equivalentes al script original.
+- [ ] Crear y ejecutar pruebas unitarias y de integración.
+- [ ] Documentar los endpoints y modelos en el código.
 
 ## Estimación y recursos
 - ETA para MVP básico (scaffold + /search + /upsert + tests): 1–2 semanas (1 dev full-time) dependiendo de acceso a Pinecone y datos de ejemplo.
@@ -140,36 +146,33 @@ Actualiza este archivo según acuerdos y confirmaciones; cuando confirmes el sta
 
 ## Plan de trabajo detallado para desarrollo y despliegue
 
-### 1. Preparación del entorno y repositorio
-- Crear un nuevo repositorio en GitHub llamado `apicone`.
+### Fase 1: Preparación del entorno y repositorio
+- Crear el repositorio en GitHub (`apicone`).
 - Clonar el repositorio en la laptop de desarrollo (Windows 11).
-- Configurar `.gitignore` para Python, Docker y archivos sensibles.
-- Añadir archivo `.env.example` para variables de entorno (sin claves reales).
+- Configurar `.gitignore` y archivos base (`README.md`, `PLAN.md`).
+- Crear y complementar el archivo `.env` con las variables necesarias.
 
-### 2. Scaffold y estructura del proyecto
-- Generar la estructura de carpetas y archivos base (`src/`, `tests/`, `Dockerfile`, `docker-compose.yml`, `requirements.txt`).
+### Fase 2: Scaffold y stack de desarrollo
+- Generar la estructura de carpetas y archivos principales (`src/`, `tests/`, `Dockerfile`, `docker-compose.yml`, `requirements.txt`).
 - Incluir configuración para FastAPI, Pinecone, Postgres y Redis en `docker-compose.yml`.
+- Probar el stack completo con Docker Compose en modo detached (`docker-compose up -d`).
+- Validar que los servicios (API, Postgres, Redis) se levantan correctamente.
 - Documentar la estructura y dependencias en el README.
 
-### 3. Desarrollo local con Docker
-- Usar Docker Desktop en Windows 11 para levantar el entorno de desarrollo.
-- Ejecutar la API y servicios auxiliares (Postgres, Redis) en contenedores.
-- Validar que el código funcione igual en Windows y Linux (evitar dependencias específicas de SO).
+### Fase 3: Migración y desarrollo de lógica de negocio
+- Migrar la lógica principal de `ask_pinecone.py` a la API (búsqueda literal y semántica).
+- Implementar los endpoints principales: `/search`, `/embeddings/upsert`, `/health`, etc.
+- Adaptar y optimizar el índice inverso y la integración con Pinecone.
+- Validar que la API cubra todos los modos de consulta y sugerencias del script original.
+- Crear y ejecutar pruebas unitarias y de integración para los endpoints.
+- Documentar los endpoints en el código (docstrings y modelos Pydantic).
 
-### 4. Integración continua (CI) en GitHub
-- Configurar GitHub Actions para ejecutar lint, tests y build de imagen Docker en cada push/PR.
+### Fase 4: Integración continua, despliegue y documentación avanzada
+- Configurar GitHub Actions para CI/CD (lint, tests, build de imagen Docker).
 - Añadir workflow para publicar la imagen en GitHub Container Registry o Docker Hub.
-
-### 5. Despliegue en producción (VPS Ubuntu)
-- Instalar Docker y Docker Compose en el servidor Ubuntu (IONOS).
-- Clonar el repositorio y copiar archivos `.env` con las claves reales.
-- Levantar los servicios con `docker-compose up -d`.
-- Configurar acceso seguro (puertos, firewall, HTTPS opcional).
-
-### 6. Mantenimiento y actualización
-- Actualizar el código y dependencias mediante PRs en GitHub.
-- Usar despliegue automatizado o manual según el workflow definido.
-- Monitorear logs y métricas desde el VPS.
+- Desplegar en VPS Ubuntu y validar funcionamiento.
+- Exponer la documentación OpenAPI y endpoints interactivos.
+- Ampliar la documentación para usuarios y desarrolladores.
 
 ---
 
