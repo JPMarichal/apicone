@@ -8,6 +8,8 @@ import os
 from datetime import datetime
 import uuid
 import re
+from typing import ClassVar
+from pydantic import ConfigDict
 
 class SearchRequest(BaseModel):
     """
@@ -17,7 +19,7 @@ class SearchRequest(BaseModel):
     q: str = Field(..., description="Consulta de búsqueda")
     filters: Optional[Dict[str, Any]] = Field(None, description="Filtros opcionales")
     top_k: Optional[int] = Field(10, description="Número máximo de resultados")
-    include_snippets: Optional[bool] = Field(False, description="Incluir fragmentos de texto")
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="allow")
     mode: Optional[str] = Field("literal", description="Modo de búsqueda: 'literal' o 'semantic'")
 
 class SearchResult(BaseModel):
@@ -27,7 +29,8 @@ class SearchResult(BaseModel):
     id: str
     score: float
     snippet: Optional[str] = None
-    metadata: Dict[str, Any]
+    metadata: Optional[Dict[str, Any]] = None
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="allow")
 
 class SearchResponse(BaseModel):
     results: List[SearchResult]
@@ -35,14 +38,17 @@ class SearchResponse(BaseModel):
 
 router = APIRouter(prefix="/api/v1", tags=["search"])
 
-# Inicialización del índice inverso y usecase (singleton)
-
 # Inicialización de adaptadores para búsqueda semántica
 from src.services.embedder_ollama import OllamaEmbedder
 from src.adapters.pinecone_adapter import PineconeAdapter
 
-jsonl_path = os.getenv("JSONL_PATH", "versiculos.jsonl")
-index_service = InvertedIndexService(jsonl_path=jsonl_path)
+jsonl_path = os.getenv("JSONL_PATH", "/app/versiculos.jsonl")
+try:
+    index_service = InvertedIndexService(jsonl_path=jsonl_path)
+    INDEX_STATUS = "ok"
+except FileNotFoundError:
+    index_service = None
+    INDEX_STATUS = "missing_data"
 
 # Configuración Pinecone
 pinecone_api_key = os.getenv("PINECONE_API_KEY", "")
@@ -63,7 +69,7 @@ search_usecase = SearchUseCase(index_service, embedder=embedder, pinecone_adapte
 
 import asyncio
 
-@router.post("/search", response_model=Dict[str, Any])
+@router.post("/search")
 async def search_endpoint(request: SearchRequest = Body(...)):
     """
     Endpoint de búsqueda de versículos.
@@ -80,7 +86,8 @@ async def search_endpoint(request: SearchRequest = Body(...)):
         top_k=request.top_k or 10,
         mode=request.mode or "literal"
     )
-    return SearchResponse(results=[SearchResult(**r) for r in results], query_embedding=None)
+    results_serialized = [SearchResult(**r).model_dump() for r in results]
+    return {"results": results_serialized, "query_embedding": None}
 
 
 class EmbeddingUpsertItem(BaseModel):

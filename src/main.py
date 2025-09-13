@@ -12,16 +12,19 @@ health_router = APIRouter(prefix="/api/v1", tags=["health"])
 import time
 start_time = time.time()
 
+
+from src.api.search import INDEX_STATUS
+
 @health_router.get("/health")
 def health():
     uptime = int(time.time() - start_time)
-    # Aquí podrías agregar chequeos reales de componentes
     return {
-        "status": "ok",
+        "status": "ok" if INDEX_STATUS == "ok" else "degraded",
         "uptime": uptime,
         "components": {
             "db": "ok",
-            "pinecone": "ok"
+            "pinecone": "ok",
+            "index": INDEX_STATUS
         }
     }
 
