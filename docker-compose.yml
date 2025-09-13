@@ -12,6 +12,7 @@ services:
     depends_on:
       - db
       - redis
+      - ollama
   db:
     image: postgres:15
     environment:
@@ -27,6 +28,11 @@ services:
     image: redis:7
     ports:
       - "6379:6379"
+    restart: unless-stopped
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
     restart: unless-stopped
 volumes:
   pgdata:

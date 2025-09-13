@@ -1,10 +1,12 @@
 import httpx
+import os
 from typing import List
 
+from typing import Optional
 
 class OllamaEmbedder:
-    def __init__(self, base_url: str = "http://localhost:11434/api/embeddings", model: str = "nomic-embed-text"):
-        self.base_url = base_url
+    def __init__(self, base_url: Optional[str] = None, model: str = "nomic-embed-text"):
+        self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://ollama:11434/api/embeddings")
         self.model = model
 
     async def embed(self, text: str) -> List[float]:
