@@ -1,5 +1,9 @@
+
 fastapi
 uvicorn
 pinecone-client
 ollama
 orjson
+pytest
+httpx
+pydantic
