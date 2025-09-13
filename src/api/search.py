@@ -1,9 +1,11 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from src.usecases.search_usecase import SearchUseCase
 from src.services.inverted_index import InvertedIndexService
 import os
+from datetime import datetime
 
 class SearchRequest(BaseModel):
     q: str = Field(..., description="Consulta de búsqueda")
@@ -87,7 +89,7 @@ async def embeddings_upsert_endpoint(request: EmbeddingUpsertRequest):
     """
     upserted = 0
     failed: List[Dict[str, Any]] = []
-    vectors: List[tuple] = []
+    vectors: List[Tuple[str, List[float], Dict[str, Any]]] = []
     for item in request.items:
         try:
             embedding = await embedder.embed(item.text)
@@ -105,3 +107,38 @@ async def embeddings_upsert_endpoint(request: EmbeddingUpsertRequest):
             for v in vectors:
                 failed.append({"id": v[0], "reason": f"Upsert error: {str(e)}"})
     return EmbeddingUpsertResponse(upserted=upserted, failed=failed)
+
+
+class DocumentResponse(BaseModel):
+    id: str
+    text: str
+    metadata: Dict[str, Any]
+    created_at: str
+    updated_at: str
+
+@router.get("/documents/{id}", response_model=DocumentResponse)
+async def get_document_by_id(id: str):
+    """
+    Devuelve el documento por ID, usando el corpus local como fuente inicial.
+    """
+    # Buscar en corpus local (versiculos.jsonl)
+    import json
+    import os
+    corpus_path = os.path.join(os.path.dirname(__file__), '../../versiculos.jsonl')
+    try:
+        with open(corpus_path, encoding='utf-8') as f:
+            for line in f:
+                doc = json.loads(line)
+                if doc.get('id') == id:
+                    from datetime import timezone
+                    now = datetime.now(timezone.utc).isoformat()
+                    return DocumentResponse(
+                        id=doc['id'],
+                        text=doc['text'],
+                        metadata=doc.get('metadata', {}),
+                        created_at=doc.get('created_at', now),
+                        updated_at=doc.get('updated_at', now)
+                    )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error leyendo corpus: {str(e)}")
+    raise HTTPException(status_code=404, detail="Documento no encontrado")
