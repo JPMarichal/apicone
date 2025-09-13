@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Body
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from typing import List, Optional, Dict, Any, Tuple
@@ -7,6 +7,7 @@ from src.services.inverted_index import InvertedIndexService
 import os
 from datetime import datetime
 import uuid
+import re
 
 class SearchRequest(BaseModel):
     q: str = Field(..., description="Consulta de búsqueda")
@@ -207,3 +208,67 @@ async def admin_reindex_endpoint(request: ReindexRequest):
     else:
         status = "dry_run"
     return ReindexResponse(job_id=job_id, status=status)
+
+
+class DocumentCreateRequest(BaseModel):
+    id: str  # obligatorio
+    text: str
+    metadata: Optional[Dict[str, Any]] = None
+
+    @classmethod
+    def validate_id(cls, v):
+        # Ejemplo de patrón: AT-genesis-06-010
+        pattern = r"^(AT|NT)-[a-z0-9\-]+-\d{2}-\d{3}$"
+        if not re.match(pattern, v):
+            raise ValueError("El id no cumple el patrón requerido (ej: AT-genesis-06-010)")
+        return v
+
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate_id
+
+class DocumentCreateResponse(BaseModel):
+    id: str
+    status: str  # "created" | "updated"
+
+@router.post("/documents", response_model=DocumentCreateResponse)
+async def create_or_update_document(request: DocumentCreateRequest = Body(...)):
+    """
+    Crea o actualiza un documento en el corpus local (versiculos.jsonl). El id debe cumplir el patrón requerido.
+    """
+    import json
+    import os
+    from datetime import timezone
+    corpus_path = os.path.join(os.path.dirname(__file__), '../../versiculos.jsonl')
+    doc_id = request.id or str(abs(hash(request.text + str(request.metadata or {}))))
+    now = datetime.now(timezone.utc).isoformat()
+    new_doc = {
+        "id": doc_id,
+        "text": request.text,
+        "metadata": request.metadata or {},
+        "created_at": now,
+        "updated_at": now
+    }
+    # Leer todos los documentos y buscar si existe
+    docs = []
+    updated = False
+    try:
+        if os.path.exists(corpus_path):
+            with open(corpus_path, encoding='utf-8') as f:
+                for line in f:
+                    doc = json.loads(line)
+                    if doc.get('id') == doc_id:
+                        # Actualizar documento
+                        doc.update(new_doc)
+                        updated = True
+                    docs.append(doc)
+        # Si no existe, agregar nuevo
+        if not updated:
+            docs.append(new_doc)
+        # Sobrescribir el archivo
+        with open(corpus_path, 'w', encoding='utf-8') as f:
+            for doc in docs:
+                f.write(json.dumps(doc, ensure_ascii=False) + '\n')
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error escribiendo corpus: {str(e)}")
+    return DocumentCreateResponse(id=doc_id, status="updated" if updated else "created")
