@@ -1,15 +1,25 @@
 from src.services.inverted_index import InvertedIndexService
 from typing import List, Dict, Any
 
+
+from src.services.embedder_ollama import OllamaEmbedder
+from src.adapters.pinecone_adapter import PineconeAdapter
+
 class SearchUseCase:
     """
     Orquesta la búsqueda literal y semántica, aplicando optimizaciones y principios SOLID.
     """
-    def __init__(self, index_service: InvertedIndexService):
+    def __init__(self, index_service: InvertedIndexService, embedder: OllamaEmbedder = None, pinecone_adapter: PineconeAdapter = None):
         self.index_service = index_service
+        self.embedder = embedder
+        self.pinecone_adapter = pinecone_adapter
 
-    def search(self, query: str, top_k: int = 10) -> List[Dict[str, Any]]:
-        # Ejemplo: solo búsqueda literal por ahora
+    async def search(self, query: str, top_k: int = 10, mode: str = "literal") -> List[Dict[str, Any]]:
+        if mode == "semantic" and self.embedder and self.pinecone_adapter:
+            embedding = await self.embedder.embed(query)
+            results = self.pinecone_adapter.query(embedding, top_k=top_k)
+            return results
+        # Modo literal (por defecto)
         results = []
         tokens = self.index_service.tokenize_words(query)
         ids = set()
