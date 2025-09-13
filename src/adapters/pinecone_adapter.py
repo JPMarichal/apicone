@@ -1,10 +1,10 @@
-import pinecone
+from pinecone import Pinecone, ServerlessSpec
 from typing import List, Dict, Any, Optional
 
 class PineconeAdapter:
     def __init__(self, api_key: str, environment: str, index_name: str, namespace: Optional[str] = None):
-        pinecone.init(api_key=api_key, environment=environment)
-        self.index = pinecone.Index(index_name)
+        self.pc = Pinecone(api_key=api_key)
+        self.index = self.pc.Index(index_name)
         self.namespace = namespace
 
     def query(self, embedding: List[float], top_k: int = 10, filter: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
