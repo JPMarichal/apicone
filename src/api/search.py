@@ -10,6 +10,7 @@ class SearchRequest(BaseModel):
     filters: Optional[Dict[str, Any]] = Field(None, description="Filtros opcionales")
     top_k: Optional[int] = Field(10, description="Número máximo de resultados")
     include_snippets: Optional[bool] = Field(False, description="Incluir fragmentos de texto")
+    mode: Optional[str] = Field("literal", description="Modo de búsqueda: 'literal' o 'semantic'")
 
 class SearchResult(BaseModel):
     id: str
@@ -24,15 +25,42 @@ class SearchResponse(BaseModel):
 router = APIRouter(prefix="/api/v1", tags=["search"])
 
 # Inicialización del índice inverso y usecase (singleton)
+
+# Inicialización de adaptadores para búsqueda semántica
+from src.services.embedder_ollama import OllamaEmbedder
+from src.adapters.pinecone_adapter import PineconeAdapter
+
 jsonl_path = os.getenv("JSONL_PATH", "versiculos.jsonl")
 index_service = InvertedIndexService(jsonl_path=jsonl_path)
-search_usecase = SearchUseCase(index_service)
+
+# Configuración Pinecone
+pinecone_api_key = os.getenv("PINECONE_API_KEY", "")
+pinecone_env = os.getenv("PINECONE_ENVIRONMENT", "us-east1-gcp")
+pinecone_index = os.getenv("PINECONE_INDEX", "escrituras")
+pinecone_namespace = os.getenv("PINECONE_NAMESPACE", "es")
+
+embedder = OllamaEmbedder()
+pinecone_adapter = PineconeAdapter(
+    api_key=pinecone_api_key,
+    environment=pinecone_env,
+    index_name=pinecone_index,
+    namespace=pinecone_namespace
+)
+
+search_usecase = SearchUseCase(index_service, embedder=embedder, pinecone_adapter=pinecone_adapter)
+
+
+import asyncio
 
 @router.post("/search", response_model=SearchResponse)
-def search_endpoint(request: SearchRequest):
+async def search_endpoint(request: SearchRequest):
     """
     Endpoint de búsqueda literal y semántica.
     Aplica optimizaciones y patrones SOLID en la lógica interna.
     """
-    results = search_usecase.search(request.q, top_k=request.top_k or 10)
+    results = await search_usecase.search(
+        request.q,
+        top_k=request.top_k or 10,
+        mode=request.mode or "literal"
+    )
     return SearchResponse(results=[SearchResult(**r) for r in results], query_embedding=None)
