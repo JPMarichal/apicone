@@ -41,7 +41,69 @@ Este proyecto expone una API que permite realizar búsquedas literales y semánt
    ```sh
    docker-compose up --build
    ```
-4. Accede a la documentación interactiva en [http://localhost:8000/docs](http://localhost:8000/docs)
+4. Accede a la documentación interactiva (OpenAPI/Swagger UI) en [http://localhost:8000/docs](http://localhost:8000/docs).
+   - Aquí puedes explorar, probar y visualizar todos los endpoints, modelos y contratos de la API.
+   - También puedes copiar los ejemplos de payload y respuestas para usarlos en Postman o cualquier cliente HTTP.
+
+## Acceso y pruebas con Postman
+
+## Especificación OpenAPI para clientes
+
+La especificación OpenAPI completa está disponible en formato JSON en:
+
+- [http://localhost:8000/openapi.json](http://localhost:8000/openapi.json)
+
+Puedes descargar este archivo y usarlo para:
+- Generar SDKs o clientes automáticos en cualquier lenguaje (usando herramientas como Swagger Codegen, OpenAPI Generator, etc).
+- Importar todos los endpoints y modelos en Postman, Insomnia, o cualquier cliente compatible.
+- Validar contratos y documentar integraciones con otros sistemas.
+
+**Ejemplo para descargar la especificación:**
+
+```sh
+curl -O http://localhost:8000/openapi.json
+```
+
+Puedes importar los endpoints manualmente o desde la especificación OpenAPI:
+
+1. Abre Postman y crea una nueva colección.
+2. Para cada endpoint, usa la URL base `http://localhost:8000` y el path correspondiente (ejemplo: `/api/v1/search`).
+3. Selecciona el método adecuado (GET, POST, etc) y copia el payload de ejemplo desde la documentación interactiva (`/docs`).
+4. Para endpoints POST, selecciona "Body" → "raw" → "JSON" e ingresa el JSON de ejemplo.
+5. Envía la petición y revisa la respuesta.
+
+**Tip:** Puedes importar la especificación OpenAPI directamente en Postman:
+   - Ve a "Import" → "Link" y pega `http://localhost:8000/openapi.json`.
+   - Postman generará automáticamente todos los endpoints y ejemplos listos para probar.
+
+**Ejemplo de petición POST en Postman:**
+
+```
+POST http://localhost:8000/api/v1/search
+Body (raw, JSON):
+{
+  "q": "amor",
+  "top_k": 3,
+  "mode": "literal"
+}
+```
+
+**Ejemplo de petición GET en Postman:**
+
+```
+GET http://localhost:8000/api/v1/documents/NT-2-juan-01-006
+```
+
+**Ejemplo de petición POST para reindexado:**
+
+```
+POST http://localhost:8000/api/v1/admin/reindex
+Body (raw, JSON):
+{
+  "batch_size": 100,
+  "dry_run": false
+}
+```
 
 ## Endpoints principales
 
