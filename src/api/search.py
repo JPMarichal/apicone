@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from typing import List, Optional, Dict, Any, Tuple
@@ -142,3 +142,43 @@ async def get_document_by_id(id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error leyendo corpus: {str(e)}")
     raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+
+class DocumentListResponse(BaseModel):
+    items: List[DocumentResponse]
+    total: int
+    limit: int
+    offset: int
+
+@router.get("/documents", response_model=DocumentListResponse)
+async def list_documents(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0)):
+    """
+    Lista documentos del corpus local con paginación básica.
+    """
+    import json
+    import os
+    from datetime import timezone
+    corpus_path = os.path.join(os.path.dirname(__file__), '../../versiculos.jsonl')
+    items = []
+    try:
+        with open(corpus_path, encoding='utf-8') as f:
+            for idx, line in enumerate(f):
+                if idx < offset:
+                    continue
+                if len(items) >= limit:
+                    break
+                doc = json.loads(line)
+                now = doc.get('updated_at') or doc.get('created_at') or datetime.now(timezone.utc).isoformat()
+                items.append(DocumentResponse(
+                    id=doc['id'],
+                    text=doc['text'],
+                    metadata=doc.get('metadata', {}),
+                    created_at=doc.get('created_at', now),
+                    updated_at=doc.get('updated_at', now)
+                ))
+        # Calcular total recorriendo todo el archivo
+        with open(corpus_path, encoding='utf-8') as f:
+            total = sum(1 for _ in f)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error leyendo corpus: {str(e)}")
+    return DocumentListResponse(items=items, total=total, limit=limit, offset=offset)
