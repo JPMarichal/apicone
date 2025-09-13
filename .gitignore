@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.env
+.env
+.env.*
+
+# VSCode
+.vscode/
+
+# Jupyter Notebooks
+*.ipynb_checkpoints
+
+# Logs
+*.log
+
+# Docker
+*.db
+*.sqlite3
+docker-compose.override.yml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test/coverage
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+
+# Virtualenv
+venv/
+ENV/
+.env/
+.venv/
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# Others
+*.bak
+*.swp
+
+# Pinecone/secret files
+pinecone.key
+
+# Misc
+*.tmp
+*.old
+
+# Ignore data files
+versiculos.jsonl
+versiculos_dbeaver.json
+
