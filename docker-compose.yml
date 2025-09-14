@@ -34,5 +34,10 @@ services:
     ports:
       - "11434:11434"
     restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    command: >
+      sh -c "ollama pull llama3 && ollama pull nomic-embed-text && ollama serve"
 volumes:
   pgdata:
+  ollama_data:
