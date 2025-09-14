@@ -1,10 +1,17 @@
 import httpx
 import os
+import logging
+import traceback
 from typing import List, Dict, Any
 
 from typing import Optional
 
+logger = logging.getLogger(__name__)
+
+
 class OllamaLLMValidator:
+    # Logear la ruta del módulo para depuración de carga
+    logger.warning("ollama_llm module loaded from: %s", __file__)
     """
     Valida la relevancia semántica de los resultados usando el LLM de Ollama.
     """
@@ -12,7 +19,14 @@ class OllamaLLMValidator:
         self.base_url = base_url or os.getenv("OLLAMA_LLM_URL", "http://ollama:11434/api/generate")
         self.model = model
 
-    async def validate_results(self, query: str, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def validate_results(self, query: str, results: List[Dict[str, Any]], **kwargs) -> List[Dict[str, Any]]:
+        # Defensive: aceptar kwargs inesperadas (p.ej. batch_size) y loguear su origen para depuración
+        if kwargs:
+            # Loguear advertencia con la pila de llamadas para localizar el caller
+            logger.warning("validate_results received unexpected kwargs: %s", kwargs)
+            tb = "\n".join(traceback.format_stack())
+            logger.debug("Call stack for unexpected kwargs in validate_results:\n%s", tb)
+
         # Construye el prompt para el LLM
         prompt = self._build_prompt(query, results)
         async with httpx.AsyncClient(timeout=30) as client:
