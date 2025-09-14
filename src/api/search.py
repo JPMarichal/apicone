@@ -68,6 +68,8 @@ search_usecase = SearchUseCase(index_service, embedder=embedder, pinecone_adapte
 
 
 import asyncio
+import logging
+import traceback
 
 @router.post("/search")
 async def search_endpoint(request: SearchRequest = Body(...)):
@@ -81,11 +83,23 @@ async def search_endpoint(request: SearchRequest = Body(...)):
     - mode: 'literal' o 'semantic'
     Responde con lista de resultados y embedding de la consulta si aplica.
     """
-    results = await search_usecase.search(
-        request.q,
-        top_k=request.top_k or 10,
-        mode=request.mode or "literal"
-    )
+    try:
+        results = await search_usecase.search(
+            request.q,
+            top_k=request.top_k or 10,
+            mode=request.mode or "literal"
+        )
+    except TypeError as e:
+        # Capturar traza completa y variables locales para diagnosticar llamadas inválidas
+        logging.exception("TypeError en search_usecase.search: %s", e)
+        tb = traceback.format_exc()
+        logging.error("Full traceback:\n%s", tb)
+        # Volcar el request como dict para ver si contiene campos inesperados
+        try:
+            logging.error("Request body dict: %s", request.model_dump())
+        except Exception:
+            logging.error("No se pudo serializar request body")
+        raise
     results_serialized = [SearchResult(**r).model_dump() for r in results]
     return {"results": results_serialized, "query_embedding": None}
 
